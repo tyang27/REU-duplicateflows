@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS worked;
 CREATE UNLOGGED TABLE worked(tmp int);
 INSERT INTO worked VALUES (0);
 
-/* Function that returns trigger.
+/* Function that returns trigger using plpythonu.
  * Trigger creates worked table with 1 when called.
  */
 CREATE OR REPLACE FUNCTION dup_function()
@@ -28,8 +28,19 @@ CREATE OR REPLACE FUNCTION dup_function()
 	plpy.execute('INSERT INTO worked VALUES (1);')
 	$$ LANGUAGE 'plpythonu';
 
+CREATE OR REPLACE FUNCTION dup_function_sql()
+	RETURNS TRIGGER AS $$
+BEGIN
+	DROP TABLE IF EXISTS worked;
+	CREATE UNLOGGED TABLE worked(tmp int);
+	INSERT INTO worked VALUES (1);
+	RETURN NEW;
+END
+	$$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+
+
 /* Executes trigger on insertion to reachability matrix. */
 DROP TRIGGER IF EXISTS dup_trigger ON rm;
 CREATE TRIGGER dup_trigger AFTER INSERT ON rm
 FOR EACH ROW
-EXECUTE PROCEDURE dup_function();
+EXECUTE PROCEDURE dup_function_sql();
